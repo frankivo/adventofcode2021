@@ -6,9 +6,9 @@
 object day15 {
   def main(args: Array[String]): Unit = {
     val start = Position(0, 0)
-    val end = Position(3, 3)
+    val end = Position(2, 2)
 
-    astar(Node(pos = start), Node(pos = end))
+    astar(Node(start), Node(end))
   }
 
   type Maze = Seq[Seq[Int]]
@@ -31,12 +31,12 @@ object day15 {
     def valid: Boolean = x >= 0 && x < maze.width && y >= 0 && y < maze.height
   }
 
-  case class Node(parent: Option[Node] = None, pos: Position) {
+  case class Node(pos: Position, parent: Node = null) {
     var g = 0
     var h = 0
     var f = 0
 
-    def children(positions: Set[Position]): Set[Node] = positions.map(Node(Some(this), _))
+    def children: Set[Node] = pos.children.map(Node(_, this))
 
     override def equals(obj: Any): Boolean = {
       val other = obj.asInstanceOf[Node]
@@ -47,13 +47,10 @@ object day15 {
   def astar(start: Node, end: Node) = {
     var open_list = Seq(start)
     var closed_list = Seq.empty[Node]
-    var current_node: Node = null
-    val path = Seq.empty[Position]
+    var current_node = open_list.head
 
     while open_list.nonEmpty
     do {
-      println(open_list)
-
       current_node = open_list.head
 
       // Get current node
@@ -62,29 +59,46 @@ object day15 {
           current_node = item
       )
 
-      open_list = open_list.filterNot(_ == current_node)
+      open_list = open_list.filterNot(_.pos == current_node.pos)
       closed_list = closed_list :+ current_node
 
-      // Found the end?
-      if (current_node.pos == end.pos) {
-        println("todo!")
-        println(current_node)
-        System.exit(1)
-      }
-
-      val child_pos = current_node.pos.children
-      val child_nodes = current_node.children(child_pos)
-
-      child_nodes.filterNot(closed_list.contains(_))
+      current_node
+        .children
+        .filterNot(closed_list.contains(_))
         .foreach(c => {
           c.g = current_node.g + 1
-          c.h = ((c.pos.x - end.pos.x) * 2) + ((c.pos.y - end.pos.y) * 2)
+          c.h = math.pow(c.pos.x - end.pos.x, 2).toInt + math.pow(c.pos.y - end.pos.y, 2).toInt
           c.f = c.g + c.h
 
           if (!open_list.contains(c))
-            open_list = open_list :+ c
+            if (!open_list.exists(c.g > _.g))
+              open_list = open_list :+ c
+          //              println(open_list)
+          //              println(closed_list)
         })
     }
+
+    println("huh" + current_node.pos)
+    println("huh2" + current_node.parent.pos)
+
+
+    var n = current_node
+    var path = Set.empty[Position]
+    while n.parent != null
+      do {
+      path += n.pos
+      n = n.parent
+    }
+
+    println(path)
+//
+//    current_node
+//      .parents
+//      .map(_.pos)
+//      .foreach(println)
+//
+//    println(current_node.parents.size)
+//    println(maze.length * maze.height)
   }
 
   def maze: Maze = {
