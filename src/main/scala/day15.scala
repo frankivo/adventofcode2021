@@ -6,10 +6,9 @@
 object day15 {
   def main(args: Array[String]): Unit = {
     val start = Position(0, 0)
-    val end = Position(maze.width, maze.height)
+    val end = Position(3, 3)
 
-    val n = Node(pos = Position(0, 0))
-    n.g = 2
+    astar(Node(pos = start), Node(pos = end))
   }
 
   type Maze = Seq[Seq[Int]]
@@ -19,26 +18,43 @@ object day15 {
     def width: Int = m.head.length
   }
 
-  case class Position(x: Int, y: Int)
+  case class Position(x: Int, y: Int) {
+    def children: Set[Position] = {
+      Set(
+        Position(x - 1, y), // Left
+        Position(x + 1, y), // Right
+        Position(x, y - 1), // Top
+        Position(x, y + 1), // Bottom
+      ).filter(_.valid)
+    }
+
+    def valid: Boolean = x >= 0 && x < maze.width && y >= 0 && y < maze.height
+  }
 
   case class Node(parent: Option[Node] = None, pos: Position) {
     var g = 0
     var h = 0
     var f = 0
+
+    def children(positions: Set[Position]): Set[Node] = positions.map(Node(Some(this), _))
+
+    override def equals(obj: Any): Boolean = {
+      val other = obj.asInstanceOf[Node]
+      other.pos == pos
+    }
   }
 
-  def astar(start: Position, end: Position) = {
-    val node_start = Node(pos = start)
-    val node_end = Node(pos = end)
-
-    val open_list = Seq(node_start)
-    val closed_list = Seq.empty[Node]
-    val current_node: Node = _
+  def astar(start: Node, end: Node) = {
+    var open_list = Seq(start)
+    var closed_list = Seq.empty[Node]
+    var current_node: Node = null
     val path = Seq.empty[Position]
 
     while open_list.nonEmpty
     do {
-      val current_node = open_list.head
+      println(open_list)
+
+      current_node = open_list.head
 
       // Get current node
       open_list.foreach(item =>
@@ -46,13 +62,28 @@ object day15 {
           current_node = item
       )
 
-      open_list = open_list - current_node
-      closed_list = closed_list + current_node
+      open_list = open_list.filterNot(_ == current_node)
+      closed_list = closed_list :+ current_node
 
       // Found the end?
-      if (current_node == node_end) {
+      if (current_node.pos == end.pos) {
         println("todo!")
+        println(current_node)
+        System.exit(1)
       }
+
+      val child_pos = current_node.pos.children
+      val child_nodes = current_node.children(child_pos)
+
+      child_nodes.filterNot(closed_list.contains(_))
+        .foreach(c => {
+          c.g = current_node.g + 1
+          c.h = ((c.pos.x - end.pos.x) * 2) + ((c.pos.y - end.pos.y) * 2)
+          c.f = c.g + c.h
+
+          if (!open_list.contains(c))
+            open_list = open_list :+ c
+        })
     }
   }
 
